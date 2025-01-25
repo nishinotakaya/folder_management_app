@@ -1,0 +1,179 @@
+#root {
+  max-width: 1280px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+}
+
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.folder-container {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem;
+}
+
+.folder-list {
+  min-width: 200px;
+  border-right: 1px solid #ccc;
+}
+
+.folder-item {
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f8f8f8;
+  border-radius: 4px;
+}
+
+.folder-item:hover {
+  background-color: #f0f0f0;
+}
+
+.folder-name {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.folder-actions,
+.file-actions {
+  display: flex;
+  gap: 0.5rem;
+  opacity: 0.7;
+}
+
+.folder-actions:hover,
+.file-actions:hover {
+  opacity: 1;
+}
+
+.folder-actions button,
+.file-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.4rem;
+  font-size: 1rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.folder-actions button:hover,
+.file-actions button:hover {
+  background-color: #e0e0e0;
+}
+
+.file-list {
+  flex: 1;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  margin: 0.3rem 0;
+  background-color: #ffffff;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  animation: fadeIn 0.3s ease;
+}
+
+.file-item:hover {
+  background-color: #f8f8f8;
+}
+
+.file-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-item a {
+  color: #333;
+  text-decoration: none;
+}
+
+.file-item a:hover {
+  text-decoration: underline;
+}
+
+.file-date {
+  color: #666;
+  font-size: 0.9rem;
+  margin-left: auto;
+  margin-right: 1rem;
+}
+
+.drop-zone {
+  border: 2px dashed #ccc;
+  padding: 2rem;
+  text-align: center;
+  background-color: #f8f8f8;
+  margin: 1rem 0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.file-list.dragging .drop-zone {
+  background-color: #e3f2fd;
+  border-color: #2196f3;
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+}
