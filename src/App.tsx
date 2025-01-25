@@ -70,6 +70,11 @@ const FileItem: React.FC<FileItemProps> = ({
   );
 };
 
+interface CustomFile extends File {
+  webkitGetAsEntry?: () => FileSystemEntry | null;
+  dataTransfer?: DataTransfer;
+}
+
 function App() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
@@ -228,18 +233,71 @@ function App() {
     'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'powerpoint',
     'application/msword': 'word',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'word',
-    'application/pdf': 'pdf',  // PDFを追加
+    'application/pdf': 'pdf',
+    'text/csv': 'excel',  // CSVファイルを追加
   };
 
-  const onDrop = useCallback(async (acceptedFiles: File[], folderId: string) => {
-    for (const file of acceptedFiles) {
+  const onDrop = useCallback(async (acceptedFiles: CustomFile[], folderId: string) => {
+    // FileSystemDirectoryEntry や FileSystemFileEntry を処理する関数
+    const processEntry = async (entry: FileSystemEntry) => {
+      if (entry.isFile) {
+        const fileEntry = entry as FileSystemFileEntry;
+        return new Promise<File>((resolve, reject) => {
+          fileEntry.file(resolve, reject);
+        });
+      } else if (entry.isDirectory) {
+        const dirEntry = entry as FileSystemDirectoryEntry;
+        const dirReader = dirEntry.createReader();
+        return new Promise<File[]>((resolve, reject) => {
+          const readEntries = () => {
+            dirReader.readEntries(async (entries) => {
+              if (entries.length === 0) {
+                resolve([]);
+              } else {
+                const files = await Promise.all(entries.map(processEntry));
+                const moreFiles = await new Promise<File[]>((res) => {
+                  setTimeout(() => readEntries(), 0);
+                  res([]);
+                });
+                resolve(files.flat().concat(moreFiles));
+              }
+            }, reject);
+          };
+          readEntries();
+        });
+      }
+      return [];
+    };
+
+    // ドロップされたアイテムを処理
+    const processItems = async (items: DataTransferItemList) => {
+      const files: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.webkitGetAsEntry) {
+          const entry = item.webkitGetAsEntry();
+          if (entry) {
+            const result = await processEntry(entry);
+            if (Array.isArray(result)) {
+              files.push(...result);
+            } else if (result) {
+              files.push(result);
+            }
+          }
+        }
+      }
+      return files;
+    };
+
+    // ファイルの処理（既存のコード）
+    const processFile = async (file: File) => {
       const isAllowed = allowedTypes[file.type];
       if (!isAllowed) {
-        alert(
+        console.warn(
           `${file.name}は対応していないファイル形式です。\n` +
           `Excel、PowerPoint、Word、PDFファイルのみ対応しています。`
         );
-        continue;
+        return;
       }
 
       const reader = new FileReader();
@@ -251,25 +309,42 @@ function App() {
           type: allowedTypes[file.type],
           lastModified: new Date(file.lastModified),
           data: base64Data,
-          deleted: 0, // boolean に設定
+          deleted: 0,
           originalFolderId: folderId,
           isHidden: false
         };
 
-        // IndexedDBにファイルを追加
         await db.files.add(processedFile);
         setFiles(prevFiles => [...prevFiles, processedFile]);
-
-        // フォルダーリストを更新
-        setFolders(await db.folders.toArray());
       };
       reader.readAsDataURL(file);
-    }
-  }, [allowedTypes, setFolders, setFiles]);
+    };
 
-  // react-dropzoneの設定
+    // ドロップされたアイテムの処理
+    if (acceptedFiles[0]?.type === '') {
+      // フォルダーがドロップされた場合
+      const entry = acceptedFiles[0].webkitGetAsEntry?.();
+      if (entry) {
+        const files = await processEntry(entry);
+        if (Array.isArray(files)) {
+          for (const file of files) {
+            await processFile(file);
+          }
+        } else if (files) {
+          await processFile(files);
+        }
+      }
+    } else {
+      // 通常のファイルがドロップされた場合
+      for (const file of acceptedFiles) {
+        await processFile(file);
+      }
+    }
+  }, [allowedTypes, setFiles]);
+
+  // Dropzoneの設定を更新
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: (acceptedFiles: File[]) => {
+    onDrop: (acceptedFiles: CustomFile[]) => {
       if (selectedFolder) {
         onDrop(acceptedFiles, selectedFolder.id);
       }
@@ -281,25 +356,17 @@ function App() {
       'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
       'application/msword': ['.doc'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'application/pdf': ['.pdf']
+      'application/pdf': ['.pdf'],
+      'text/csv': ['.csv']  // CSVファイルを追加
     },
     noClick: true,
     noKeyboard: true,
     multiple: true,
-    onDragEnter: (event: React.DragEvent<HTMLElement>) => {
-      event.preventDefault();
-    },
-    onDragOver: (event: React.DragEvent<HTMLElement>) => {
-      event.preventDefault();
-    },
-    onDragLeave: (event: React.DragEvent<HTMLElement>) => {
-      event.preventDefault();
-    }
-  }) as {
-    getRootProps: () => React.HTMLAttributes<HTMLDivElement>;
-    getInputProps: () => React.InputHTMLAttributes<HTMLInputElement>;
-    isDragActive: boolean;
-  };
+    onDragEnter: (event) => event.preventDefault(),
+    onDragOver: (event) => event.preventDefault(),
+    onDragLeave: (event) => event.preventDefault(),
+    useFsAccessApi: false
+  });
 
   // ファイルのダウンロード処理
   const handleDownload = (fileData: string, fileName: string) => {
