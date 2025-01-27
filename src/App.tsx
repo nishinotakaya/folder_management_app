@@ -10,7 +10,6 @@ import * as pdfjsLib from 'pdfjs-dist';
 import OpenAI from 'openai';
 import FileItem from './components/files/FileItem';
 
-
 // PDFワーカーの設定
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -48,38 +47,43 @@ function App() {
     }
   }, [accessToken]);
 
-  const login = useGoogleLogin({
-    onSuccess: async (response) => {
-      console.log('ログイン成功:', response);
-      setAccessToken(response.access_token);
-
-      // ユーザー情報を取得
-      try {
-        const userInfoResponse = await axios.get(
-          'https://www.googleapis.com/oauth2/v2/userinfo',
-          {
-            headers: {
-              Authorization: `Bearer ${response.access_token}`
+    const login = useGoogleLogin({
+      onSuccess: async (response) => {
+        console.log("ログイン成功:", response);
+        setAccessToken(response.access_token);
+    
+        // ユーザー情報を取得
+        try {
+          const userInfoResponse = await axios.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            {
+              headers: {
+                Authorization: `Bearer ${response.access_token}`,
+              },
             }
-          }
-        );
-        setUserEmail(userInfoResponse.data.email);
-        localStorage.setItem('userEmail', userInfoResponse.data.email);
-      } catch (error) {
-        console.error('ユーザー情報の取得に失敗:', error);
-      }
-
-      const expirationTime = new Date().getTime() + (response.expires_in * 1000);
-      localStorage.setItem('tokenExpirationTime', expirationTime.toString());
-    },
-    onError: (error) => {
-      console.error('ログインエラー:', error);
-      alert('ログインに失敗しました。');
-    },
-    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.metadata email profile openid https://www.googleapis.com/auth/spreadsheets.readonly',
-    flow: 'implicit',
-    prompt: 'select_account'
-  });
+          );
+          setUserEmail(userInfoResponse.data.email);
+          localStorage.setItem("userEmail", userInfoResponse.data.email);
+        } catch (error) {
+          console.error("ユーザー情報の取得に失敗:", error);
+        }
+    
+        const expirationTime =
+          new Date().getTime() + response.expires_in * 1000;
+        localStorage.setItem("tokenExpirationTime", expirationTime.toString());
+      },
+      onError: (error) => {
+        console.error("ログインエラー:", error);
+        alert("ログインに失敗しました。");
+      },
+      scope: [
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/spreadsheets.readonly",
+      ].join(" "), // 必要なスコープを設定
+      flow: "implicit",
+      prompt: "select_account",
+    });
+  
 
   useEffect(() => {
     const checkTokenExpiration = () => {
@@ -619,36 +623,77 @@ function App() {
   }, [accessToken]);
 
   const importSpreadsheet = async () => {
+    console.log("importSpreadsheet関数が呼び出されました");
+  
     if (!accessToken) {
-      alert('Googleにログインしてください。');
+      console.error("アクセストークンがありません。ログインしてください。");
+      alert("Googleにログインしてください。");
       return;
     }
-
-    // Google Picker APIを使用してスプレッドシートを選択
-    const picker = new window.google.picker.PickerBuilder()
-      .addView(window.google.picker.ViewId.SPREADSHEETS)
-      .setOAuthToken(accessToken)
-      .setDeveloperKey('YOUR_ACTUAL_DEVELOPER_KEY')
-      .setCallback(async (data: any) => {
-        if (data[window.google.picker.Response.ACTION] === window.google.picker.Action.PICKED) {
-          const doc = data[window.google.picker.Response.DOCUMENTS][0];
-          const id = doc[window.google.picker.Document.ID];
-          console.log('選択されたスプレッドシートID:', id);
-
-          // Google Sheets APIを使用してスプレッドシートデータを取得
-          const response = await axios.get(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/Sheet1`, {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          });
-
-          console.log('スプレッドシートデータ:', response.data);
-        }
-      })
-      .build();
-    picker.setVisible(true);
-  };
-
+  
+    try {
+      // Google Picker APIがロード済みでない場合はスクリプトをロード
+      if (!window.google || !window.google.picker) {
+        console.log("Google Picker APIスクリプトをロード中...");
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://apis.google.com/js/api.js";
+          script.onload = () => {
+            console.log("Google Picker APIスクリプトがロードされました。Pickerを初期化します...");
+            gapi.load("picker", () => {
+              console.log("Google Picker APIが初期化されました");
+              resolve();
+            });
+          };
+          script.onerror = () => {
+            console.error("Google Picker APIスクリプトのロードに失敗しました");
+            reject(new Error("Google Picker APIスクリプトのロードに失敗しました"));
+          };
+          document.body.appendChild(script);
+        });
+      }
+  
+      console.log("Google Picker APIがロード済みです。PickerBuilderを構築します...");
+  
+      // Google Picker APIのPickerBuilderをビルド
+      const picker = new window.google.picker.PickerBuilder()
+        .addView(window.google.picker.ViewId.SPREADSHEETS) // スプレッドシートを選択するビューを追加
+        .setOAuthToken(accessToken) // アクセストークンを設定
+        .setDeveloperKey(import.meta.env.VITE_GOOGLE_PICKER_KEY) // Picker用のAPIキーを設定
+        .setCallback(async (data: any) => {
+          console.log("Pickerのコールバックが呼び出されました", data);
+  
+          if (data[window.google.picker.Response.ACTION] === window.google.picker.Action.PICKED) {
+            const doc = data[window.google.picker.Response.DOCUMENTS][0];
+            const id = doc[window.google.picker.Document.ID];
+            console.log("選択されたスプレッドシートID:", id);
+  
+            // Google Sheets APIを使用してスプレッドシートデータを取得
+            console.log("Google Sheets APIからデータを取得中...");
+            const response = await axios.get(
+              `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/Sheet1`,
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              }
+            );
+            console.log("スプレッドシートデータ取得成功:", response.data);
+          } else {
+            console.log("スプレッドシートの選択がキャンセルされました");
+          }
+        })
+        .build();
+  
+      console.log("Pickerを表示します");
+      picker.setVisible(true);
+    } catch (error) {
+      console.error("Google Pickerエラーが発生しました:", error);
+      alert("Google Pickerでエラーが発生しました。詳細はコンソールをご確認ください。");
+    }
+  };  
+  
+  
   return (
     <div className="App">
       <h1>請求書管理システム</h1>
@@ -738,7 +783,7 @@ function App() {
           </div>
         )}
       </div>
-      <button onClick={importSpreadsheet}>スプレッドシートをインポート</button>
+      <button onClick={() => importSpreadsheet()}>スプレッドシートをインポート</button>
     </div>
   )
 }

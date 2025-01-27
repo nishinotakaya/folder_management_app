@@ -6,8 +6,8 @@ export interface MyFile {
   name: string;
   type: 'excel' | 'powerpoint' | 'word' | 'pdf';
   lastModified: Date;
-  data: string;             // Base64エンコードされたファイルデータ
-  deleted: number;  // booleanからnumberに変更
+  data: string; // Base64エンコードされたファイルデータ
+  deleted: number; // booleanからnumberに変更
   originalFolderId: string | null;
   deletedAt?: Date;
   isHidden: boolean;
