@@ -11,6 +11,7 @@
   "dependencies": {
     "@react-oauth/google": "^0.12.1",
     "@types/pdfjs-dist": "^2.10.377",
+    "attr-accept": "^2.2.5",
     "axios": "^1.7.9",
     "dexie": "^4.0.11",
     "file-saver": "^2.0.5",

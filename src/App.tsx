@@ -745,10 +745,10 @@ function App() {
 
 // AppをGoogleOAuthProviderでラップしたコンポーネントをエクスポート
 const AppWithAuth = () => {
-  const CLIENT_ID = import.meta.env.CLIENT_ID; // 環境変数からCLIENT_IDを取得
+  const VITE_CLIENT_ID = import.meta.env.VITE_CLIENT_ID; // 環境変数からCLIENT_IDを取得
 
   return (
-    <GoogleOAuthProvider clientId={CLIENT_ID}>
+    <GoogleOAuthProvider clientId={VITE_CLIENT_ID}>
       <App />
     </GoogleOAuthProvider>
   );
