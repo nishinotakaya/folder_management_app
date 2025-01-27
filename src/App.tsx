@@ -384,16 +384,13 @@ function App() {
       'application/msword': ['.doc'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
       'application/pdf': ['.pdf'],
-      'text/csv': ['.csv']  // CSVファイルを追加
+      'text/csv': ['.csv'],
     },
     noClick: true,
     noKeyboard: true,
     multiple: true,
-    onDragEnter: (event) => event.preventDefault(),
-    onDragOver: (event) => event.preventDefault(),
-    onDragLeave: (event) => event.preventDefault(),
-    useFsAccessApi: false
   });
+  
 
   // ファイルのダウンロード処理
   const handleDownload = (fileData: string, fileName: string) => {
@@ -662,7 +659,7 @@ function App() {
         .setDeveloperKey(import.meta.env.VITE_GOOGLE_PICKER_KEY) // Picker用のAPIキーを設定
         .setCallback(async (data: any) => {
           console.log("Pickerのコールバックが呼び出されました", data);
-  
+
           if (data[window.google.picker.Response.ACTION] === window.google.picker.Action.PICKED) {
             const doc = data[window.google.picker.Response.DOCUMENTS][0];
             const id = doc[window.google.picker.Document.ID];
