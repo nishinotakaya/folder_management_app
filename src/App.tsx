@@ -788,6 +788,7 @@ function App() {
 // AppをGoogleOAuthProviderでラップしたコンポーネントをエクスポート
 const AppWithAuth = () => {
   const VITE_CLIENT_ID = import.meta.env.VITE_CLIENT_ID; // 環境変数からCLIENT_IDを取得
+  console.log(import.meta.env.VITE_CLIENT_ID);
 
   return (
     <GoogleOAuthProvider clientId={VITE_CLIENT_ID}>
