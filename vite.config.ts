@@ -10,5 +10,13 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
       'Cross-Origin-Embedder-Policy': 'require-corp'
     }
+  },
+  optimizeDeps: {
+    include: ['pdfjs-dist']
+  },
+  build: {
+    commonjsOptions: {
+      include: [/pdfjs-dist/]
+    }
   }
 });

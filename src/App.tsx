@@ -1,74 +1,28 @@
 // src/App.tsx
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import './App.css';
-import React from 'react';
 import { useDropzone } from 'react-dropzone';
 import { saveAs } from 'file-saver';
 import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import axios from 'axios';
-import { db, Folder, MyFile } from './db';
+import { db, Folder, MyFile as DBMyFile } from './db';
+import * as pdfjsLib from 'pdfjs-dist';
+import OpenAI from 'openai';
+import FileItem from './components/files/FileItem';
 
-interface FileItemProps {
-  file: MyFile;
-  importToGoogleDrive: (file: MyFile) => void;
-  handleDownload: (fileData: string, fileName: string) => void;
-  restoreFile: (fileId: string) => void;
-  permanentlyDeleteFile: (fileId: string) => void;
-  editFileName: (folderId: string, fileId: string) => void;
-  moveToTrash: (folderId: string, fileId: string) => void;
-  isTrash: boolean;
+
+// PDFワーカーの設定
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
+
+interface InvoiceData {
+  totalAmount?: number;
+  invoiceNumber?: string;
+  date?: string;
+  dueDate?: string;
 }
-
-const FileItem: React.FC<FileItemProps> = ({
-  file,
-  importToGoogleDrive,
-  handleDownload,
-  restoreFile,
-  permanentlyDeleteFile,
-  editFileName,
-  moveToTrash,
-  isTrash
-}) => {
-  return (
-    <div className={`file-item ${file.isHidden ? 'hidden' : ''}`}>
-      <div className="file-info">
-        {file.type === 'excel' && '📊'}
-        {file.type === 'powerpoint' && '📑'}
-        {file.type === 'word' && '📝'}
-        {file.type === 'pdf' && '📕'}
-        <span
-          className="file-name"
-          onClick={() => handleDownload(file.data, file.name)}
-          style={{ cursor: 'pointer' }}
-        >
-          {file.name}
-        </span>
-        <span className="file-date">
-          {isTrash
-            ? `削除日: ${file.deletedAt ? new Date(file.deletedAt).toLocaleDateString() : ''}`
-            : new Date(file.lastModified).toLocaleDateString()
-          }
-        </span>
-      </div>
-      <div className="file-actions">
-        {isTrash ? (
-          <>
-            <button onClick={() => restoreFile(file.id)} title="ファイルを復元">♻️</button>
-            <button onClick={() => permanentlyDeleteFile(file.id)} title="完全に削除">🗑️</button>
-          </>
-        ) : (
-          <>
-            <button onClick={() => editFileName(file.originalFolderId || '', file.id)} title="ファイル名を編集">✏️</button>
-            <button onClick={() => moveToTrash(file.originalFolderId || '', file.id)} title="ゴミ箱に移動">🗑️</button>
-            {(file.type === 'excel' || file.type === 'powerpoint') && (
-              <button onClick={() => importToGoogleDrive(file)} title="Google Driveにインポート">⇪ Import</button>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
 
 interface CustomFile extends File {
   webkitGetAsEntry?: () => FileSystemEntry | null;
@@ -78,7 +32,7 @@ interface CustomFile extends File {
 function App() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
-  const [files, setFiles] = useState<MyFile[]>([]);
+  const [files, setFiles] = useState<DBMyFile[]>([]);
   const [accessToken, setAccessToken] = useState<string | null>(() =>
     localStorage.getItem('googleAccessToken')
   );
@@ -122,7 +76,7 @@ function App() {
       console.error('ログインエラー:', error);
       alert('ログインに失敗しました。');
     },
-    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.metadata email profile openid',
+    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.metadata email profile openid https://www.googleapis.com/auth/spreadsheets.readonly',
     flow: 'implicit',
     prompt: 'select_account'
   });
@@ -226,7 +180,7 @@ function App() {
   };
 
   // 受け入れるファイル拡張子と対応するカスタムtypeを設定
-  const allowedTypes: Record<string, MyFile['type']> = {
+  const allowedTypes: Record<string, DBMyFile['type']> = {
     'application/vnd.ms-excel': 'excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'excel',
     'application/vnd.ms-powerpoint': 'powerpoint',
@@ -235,6 +189,88 @@ function App() {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'word',
     'application/pdf': 'pdf',
     'text/csv': 'excel',  // CSVファイルを追加
+  };
+
+  // OpenAI APIの設定
+  const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+  console.log('OpenAI APIキーの長さ:', OPENAI_API_KEY?.length);
+
+  // 合計金額を計算する関数
+  const calculateTotalAmount = async (pdfText: string): Promise<number> => {
+    try {
+      const openai = new OpenAI({
+        apiKey: OPENAI_API_KEY,
+        dangerouslyAllowBrowser: true,
+        maxRetries: 2,
+        timeout: 30000,
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: "請求書から合計金額のみを数値で抽出してください。カンマや円マークは除いて数値のみを返してください。例：「123456」"
+          },
+          { role: "user", content: pdfText }
+        ],
+        temperature: 0.3,
+        max_tokens: 50  // 数値のみを返すので少なめに設定
+      });
+
+      const amount = completion.choices[0].message.content;
+      // 数値以外の文字を除去して数値に変換
+      const cleanAmount = amount?.replace(/[^0-9]/g, '');
+      return cleanAmount ? parseInt(cleanAmount) : 0;
+
+    } catch (error) {
+      console.error('合計金額の計算エラー:', error);
+      return 0;
+    }
+  };
+
+  const processInvoicePDF = async (pdfData: string): Promise<InvoiceData> => {
+    try {
+      const pdfText = await extractTextFromPDF(pdfData);
+
+      // 合計金額を計算
+      const totalAmount = await calculateTotalAmount(pdfText);
+
+      // 他の情報も含めて返す
+      return {
+        totalAmount,
+        // ... その他の情報
+      };
+
+    } catch (error) {
+      console.error('PDF解析エラー:', error);
+      return {};
+    }
+  };
+
+  const extractTextFromPDF = async (pdfData: string): Promise<string> => {
+    try {
+      const data = atob(pdfData.split(',')[1]);
+      const array = new Uint8Array(data.length);
+
+      for (let i = 0; i < data.length; i++) {
+        array[i] = data.charCodeAt(i);
+      }
+
+      const pdf = await pdfjsLib.getDocument({ data: array }).promise;
+      let text = '';
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map((item: any) => item.str).join(' ');
+      }
+
+      return text;
+    } catch (error) {
+      console.error('PDFのテキスト抽出エラー:', error);
+      throw new Error('PDFテキスト抽出に失敗しました');
+    }
   };
 
   const onDrop = useCallback(async (acceptedFiles: CustomFile[], folderId: string) => {
@@ -269,26 +305,6 @@ function App() {
       return [];
     };
 
-    // ドロップされたアイテムを処理
-    const processItems = async (items: DataTransferItemList) => {
-      const files: File[] = [];
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.webkitGetAsEntry) {
-          const entry = item.webkitGetAsEntry();
-          if (entry) {
-            const result = await processEntry(entry);
-            if (Array.isArray(result)) {
-              files.push(...result);
-            } else if (result) {
-              files.push(result);
-            }
-          }
-        }
-      }
-      return files;
-    };
-
     // ファイルの処理（既存のコード）
     const processFile = async (file: File) => {
       const isAllowed = allowedTypes[file.type];
@@ -303,7 +319,7 @@ function App() {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64Data = e.target?.result as string;
-        const processedFile: MyFile = {
+        const processedFile: DBMyFile = {
           id: Date.now().toString() + Math.random(),
           name: file.name,
           type: allowedTypes[file.type],
@@ -313,6 +329,13 @@ function App() {
           originalFolderId: folderId,
           isHidden: false
         };
+
+        if (file.type === 'application/pdf') {
+          const invoiceData = await processInvoicePDF(base64Data);
+          processedFile.metadata = {
+            invoiceData
+          };
+        }
 
         await db.files.add(processedFile);
         setFiles(prevFiles => [...prevFiles, processedFile]);
@@ -467,7 +490,7 @@ function App() {
   };
 
   // Google Driveにインポートする機能
-  const importToGoogleDrive = async (file: MyFile) => {
+  const importToGoogleDrive = async (file: DBMyFile) => {
     if (!accessToken) {
       alert('Google APIのアクセストークンが設定されていません。ログインしてください。');
       return;
@@ -534,6 +557,7 @@ function App() {
     }
   };
 
+
   // フォルダーをソートする関数（ゴミ箱を最後に）
   const sortedFolders = useMemo(() => {
     return [...folders].sort((a, b) => {
@@ -543,9 +567,91 @@ function App() {
     });
   }, [folders]);
 
+  // ファイルを合計金額と名前でソートする関数
+  const sortedFiles = useMemo(() => {
+    return [...files].sort((a, b) => {
+      return a.name.localeCompare(b.name); // 名前でソート
+    });
+  }, [files]);
+
+  // 選択されたフォルダ内のPDFファイルの合計金額を計算する関数
+  const calculateTotalAmountFromPDF = useMemo(() => {
+    if (!selectedFolder || selectedFolder.isTrash) return 0;
+
+    return files.reduce((total, file) => {
+      const amount = file.type === 'pdf' && file.metadata?.invoiceData?.totalAmount
+        ? Number(file.metadata.invoiceData.totalAmount)
+        : 0;
+
+      // NaNをチェック
+      return total + (isNaN(amount) ? 0 : amount);
+    }, 0);
+  }, [files, selectedFolder]);
+
+  const fetchFilesFromGoogleDrive = async (accessToken: string) => {
+    try {
+      const response = await axios.get('https://www.googleapis.com/drive/v3/files', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        params: {
+          q: "'root' in parents", // ルートフォルダのファイルを取得
+          fields: 'files(id, name, mimeType)',
+        },
+      });
+
+      const files = response.data.files;
+      console.log('Google Driveから取得したファイル:', files);
+      return files;
+    } catch (error) {
+      console.error('Google Driveからのファイル取得エラー:', error);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    if (accessToken) {
+      fetchFilesFromGoogleDrive(accessToken).then((files) => {
+        // 取得したファイルをアプリケーションに取り込む処理
+        console.log(files);
+      });
+    }
+  }, [accessToken]);
+
+  const importSpreadsheet = async () => {
+    if (!accessToken) {
+      alert('Googleにログインしてください。');
+      return;
+    }
+
+    // Google Picker APIを使用してスプレッドシートを選択
+    const picker = new window.google.picker.PickerBuilder()
+      .addView(window.google.picker.ViewId.SPREADSHEETS)
+      .setOAuthToken(accessToken)
+      .setDeveloperKey('YOUR_ACTUAL_DEVELOPER_KEY')
+      .setCallback(async (data: any) => {
+        if (data[window.google.picker.Response.ACTION] === window.google.picker.Action.PICKED) {
+          const doc = data[window.google.picker.Response.DOCUMENTS][0];
+          const id = doc[window.google.picker.Document.ID];
+          console.log('選択されたスプレッドシートID:', id);
+
+          // Google Sheets APIを使用してスプレッドシートデータを取得
+          const response = await axios.get(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/Sheet1`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+
+          console.log('スプレッドシートデータ:', response.data);
+        }
+      })
+      .build();
+    picker.setVisible(true);
+  };
+
   return (
     <div className="App">
-      <h1>フォルダー管理システム</h1>
+      <h1>請求書管理システム</h1>
       <div className="auth-section">
         {accessToken ? (
           <div>
@@ -592,7 +698,7 @@ function App() {
             )}
             {selectedFolder.isTrash ? (
               <>
-                {files.map(file => (
+                {sortedFiles.map(file => (
                   <FileItem
                     key={file.id}
                     file={file}
@@ -608,7 +714,7 @@ function App() {
               </>
             ) : (
               <>
-                {files.map(file => (
+                {sortedFiles.map(file => (
                   <FileItem
                     key={file.id}
                     file={file}
@@ -623,16 +729,23 @@ function App() {
                 ))}
               </>
             )}
+            {/* フォルダ内のPDF合計金額を表示 */}
+            {!selectedFolder.isTrash && files.some(file => file.type === 'pdf') && (
+              <div className="total-amount">
+                <h3>請求書合計: ¥{calculateTotalAmountFromPDF.toLocaleString()}</h3>
+              </div>
+            )}
           </div>
         )}
       </div>
+      <button onClick={importSpreadsheet}>スプレッドシートをインポート</button>
     </div>
   )
 }
 
 // AppをGoogleOAuthProviderでラップしたコンポーネントをエクスポート
 const AppWithAuth = () => {
-  const CLIENT_ID = '1084259707763-8n73b61163lo7m5at6mcpgmn5svcmcs5.apps.googleusercontent.com';
+  const CLIENT_ID = import.meta.env.CLIENT_ID; // 環境変数からCLIENT_IDを取得
 
   return (
     <GoogleOAuthProvider clientId={CLIENT_ID}>

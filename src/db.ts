@@ -11,6 +11,14 @@ export interface MyFile {
   originalFolderId: string | null;
   deletedAt?: Date;
   isHidden: boolean;
+  metadata?: {
+    invoiceData?: {
+      totalAmount?: number;
+      invoiceNumber?: string;
+      date?: string;
+      dueDate?: string;    // 支払い期限を追加
+    };
+  };
 }
 
 export interface Folder {
@@ -27,7 +35,7 @@ class MyDatabase extends Dexie {
     super("FolderManagementDB");
     this.version(1).stores({
       folders: 'id,name,isTrash',
-      files: 'id,name,type,lastModified,deleted,originalFolderId,isHidden'
+      files: 'id,name,type,lastModified,deleted,originalFolderId,deletedAt,isHidden'
     });
   }
 }
