@@ -68,7 +68,7 @@ const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({ selectedFolderId, close
     const doc = new jsPDF();
 
     // フォントの埋め込み
-    const fontUrl = '/src/assets/fonts/NotoSansJP-Regular.ttf'; // フォントファイルのパス
+    const fontUrl = '/fonts/NotoSansJP-Regular.ttf';// フォントファイルのパス
     console.log('フォントURL:', fontUrl);
 
     try {
