@@ -110,8 +110,7 @@ const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({ selectedFolderId, close
       doc.text(`支払期日: ${invoiceData.dueDate}`, 10, 70);
 
       // 振込先情報
-      doc.text(`振込先`, 10, 80);
-      doc.text(invoiceData.bankDetails, 10, 90);
+      doc.text(`振込先:  ${invoiceData.bankDetails}`, 10, 80);
 
       // テーブルヘッダー
       autoTable(doc, {
