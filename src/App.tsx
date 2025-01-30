@@ -8,7 +8,9 @@ import axios from 'axios';
 import { db, Folder, MyFile as DBMyFile } from './db';
 import * as pdfjsLib from 'pdfjs-dist';
 import OpenAI from 'openai';
-import FileItem from './components/files/FileItem';
+import FileList from './components/files/FileList';
+import { BrowserRouter as Router } from 'react-router-dom';
+import InvoiceCreator from './components/files/InvoiceCreator';
 
 // PDFワーカーの設定
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -38,6 +40,7 @@ function App() {
   const [userEmail, setUserEmail] = useState<string | null>(() =>
     localStorage.getItem('userEmail')
   );
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (accessToken) {
@@ -47,43 +50,43 @@ function App() {
     }
   }, [accessToken]);
 
-    const login = useGoogleLogin({
-      onSuccess: async (response) => {
-        console.log("ログイン成功:", response);
-        setAccessToken(response.access_token);
-    
-        // ユーザー情報を取得
-        try {
-          const userInfoResponse = await axios.get(
-            "https://www.googleapis.com/oauth2/v2/userinfo",
-            {
-              headers: {
-                Authorization: `Bearer ${response.access_token}`,
-              },
-            }
-          );
-          setUserEmail(userInfoResponse.data.email);
-          localStorage.setItem("userEmail", userInfoResponse.data.email);
-        } catch (error) {
-          console.error("ユーザー情報の取得に失敗:", error);
-        }
-    
-        const expirationTime =
-          new Date().getTime() + response.expires_in * 1000;
-        localStorage.setItem("tokenExpirationTime", expirationTime.toString());
-      },
-      onError: (error) => {
-        console.error("ログインエラー:", error);
-        alert("ログインに失敗しました。");
-      },
-      scope: [
-        "https://www.googleapis.com/auth/drive.file",
-        "https://www.googleapis.com/auth/spreadsheets.readonly",
-      ].join(" "), // 必要なスコープを設定
-      flow: "implicit",
-      prompt: "select_account",
-    });
-  
+  const login = useGoogleLogin({
+    onSuccess: async (response) => {
+      console.log("ログイン成功:", response);
+      setAccessToken(response.access_token);
+
+      // ユーザー情報を取得
+      try {
+        const userInfoResponse = await axios.get(
+          "https://www.googleapis.com/oauth2/v2/userinfo",
+          {
+            headers: {
+              Authorization: `Bearer ${response.access_token}`,
+            },
+          }
+        );
+        setUserEmail(userInfoResponse.data.email);
+        localStorage.setItem("userEmail", userInfoResponse.data.email);
+      } catch (error) {
+        console.error("ユーザー情報の取得に失敗:", error);
+      }
+
+      const expirationTime =
+        new Date().getTime() + response.expires_in * 1000;
+      localStorage.setItem("tokenExpirationTime", expirationTime.toString());
+    },
+    onError: (error) => {
+      console.error("ログインエラー:", error);
+      alert("ログインに失敗しました。");
+    },
+    scope: [
+      "https://www.googleapis.com/auth/drive.file",
+      "https://www.googleapis.com/auth/spreadsheets.readonly",
+    ].join(" "), // 必要なスコープを設定
+    flow: "implicit",
+    prompt: "select_account",
+  });
+
 
   useEffect(() => {
     const checkTokenExpiration = () => {
@@ -390,7 +393,7 @@ function App() {
     noKeyboard: true,
     multiple: true,
   });
-  
+
 
   // ファイルのダウンロード処理
   const handleDownload = (fileData: string, fileName: string) => {
@@ -621,13 +624,13 @@ function App() {
 
   const importSpreadsheet = async () => {
     console.log("importSpreadsheet関数が呼び出されました");
-  
+
     if (!accessToken) {
       console.error("アクセストークンがありません。ログインしてください。");
       alert("Googleにログインしてください。");
       return;
     }
-  
+
     try {
       // Google Picker APIがロード済みでない場合はスクリプトをロード
       if (!window.google || !window.google.picker) {
@@ -649,9 +652,9 @@ function App() {
           document.body.appendChild(script);
         });
       }
-  
+
       console.log("Google Picker APIがロード済みです。PickerBuilderを構築します...");
-  
+
       // Google Picker APIのPickerBuilderをビルド
       const picker = new window.google.picker.PickerBuilder()
         .addView(window.google.picker.ViewId.SPREADSHEETS) // スプレッドシートを選択するビューを追加
@@ -664,7 +667,7 @@ function App() {
             const doc = data[window.google.picker.Response.DOCUMENTS][0];
             const id = doc[window.google.picker.Document.ID];
             console.log("選択されたスプレッドシートID:", id);
-  
+
             // Google Sheets APIを使用してスプレッドシートデータを取得
             console.log("Google Sheets APIからデータを取得中...");
             const response = await axios.get(
@@ -681,107 +684,134 @@ function App() {
           }
         })
         .build();
-  
+
       console.log("Pickerを表示します");
       picker.setVisible(true);
     } catch (error) {
       console.error("Google Pickerエラーが発生しました:", error);
       alert("Google Pickerでエラーが発生しました。詳細はコンソールをご確認ください。");
     }
-  };  
-  
-  
+  };
+
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
+
+  // 新しいファイルを追加する関数
+  const addNewFile = (newFile: DBMyFile) => {
+    setFiles(prevFiles => [...prevFiles, newFile]);
+  };
+
   return (
-    <div className="App">
-      <h1>請求書管理システム</h1>
-      <div className="auth-section">
-        {accessToken ? (
-          <div>
-            <p>ログイン中: {userEmail}</p>
-            <button onClick={logout}>ログアウト</button>
-            <button onClick={switchAccount}>アカウント切り替え</button>
-          </div>
-        ) : (
-          <button onClick={() => login()}>Googleでログイン</button>
-        )}
-      </div>
-      <div className="folder-container">
-        <div className="folder-list">
-          <button onClick={addFolder}>新規フォルダー作成</button>
-          {sortedFolders.map(folder => (
-            <div key={folder.id} className="folder-item">
-              <div className="folder-name" onClick={() => setSelectedFolder(folder)}>
-                {folder.isTrash ? '🗑️' : '📁'} {folder.name}
+    <Router>
+      <div className="App">
+        <h1>請求書管理システム</h1>
+        <div className="auth-section">
+          {accessToken ? (
+            <div>
+              <p>ログイン中: {userEmail}</p>
+              <button onClick={logout}>ログアウト</button>
+              <button onClick={switchAccount}>アカウント切り替え</button>
+            </div>
+          ) : (
+            <button onClick={() => login()}>Googleでログイン</button>
+          )}
+        </div>
+        <div className="folder-container">
+          <div className="folder-list">
+            <button onClick={addFolder}>新規フォルダー作成</button>
+            {sortedFolders.map(folder => (
+              <div key={folder.id} className="folder-item">
+                <div className="folder-name" onClick={() => setSelectedFolder(folder)}>
+                  {folder.isTrash ? '🗑️' : '📁'} {folder.name}
+                </div>
+                {!folder.isTrash && (
+                  <div className="folder-actions">
+                    <button onClick={() => editFolderName(folder.id)} title="フォルダー名を編集">✏️</button>
+                    <button onClick={() => deleteFolder(folder.id)} title="フォルダーを削除">🗑️</button>
+                  </div>
+                )}
               </div>
-              {!folder.isTrash && (
-                <div className="folder-actions">
-                  <button onClick={() => editFolderName(folder.id)} title="フォルダー名を編集">✏️</button>
-                  <button onClick={() => deleteFolder(folder.id)} title="フォルダーを削除">🗑️</button>
+            ))}
+          </div>
+
+          {selectedFolder && (
+            <div
+              className={`file-list ${isDragActive ? 'dragging' : ''}`}
+              {...getRootProps()}
+            >
+              <input {...getInputProps()} />
+              <h2>{selectedFolder.name}の中身</h2>
+              {!selectedFolder.isTrash && (
+                <p className="drop-zone">
+                  {isDragActive
+                    ? 'ファイルをここにドロップしてください'
+                    : 'ここにファイルをドラッグ＆ドロップしてください（Excel, PowerPoint, Word, PDF）'
+                  }
+                </p>
+              )}
+              {selectedFolder.isTrash ? (
+                <>
+                  {sortedFiles.map(file => (
+                    <FileList
+                      key={file.id}
+                      file={file}
+                      importToGoogleDrive={importToGoogleDrive}
+                      handleDownload={handleDownload}
+                      restoreFile={restoreFile}
+                      permanentlyDeleteFile={permanentlyDeleteFile}
+                      editFileName={editFileName}
+                      moveToTrash={moveToTrash}
+                      isTrash={true}
+                    />
+                  ))}
+                </>
+              ) : (
+                <>
+                  {sortedFiles.map(file => (
+                    <FileList
+                      key={file.id}
+                      file={file}
+                      importToGoogleDrive={importToGoogleDrive}
+                      handleDownload={handleDownload}
+                      restoreFile={restoreFile}
+                      permanentlyDeleteFile={permanentlyDeleteFile}
+                      editFileName={editFileName}
+                      moveToTrash={moveToTrash}
+                      isTrash={false}
+                    />
+                  ))}
+                </>
+              )}
+              {/* フォルダ内のPDF合計金額を表示 */}
+              {!selectedFolder.isTrash && files.some(file => file.type === 'pdf') && (
+                <div className="total-amount">
+                  <h3>請求書合計: ¥{calculateTotalAmountFromPDF.toLocaleString()}</h3>
                 </div>
               )}
             </div>
-          ))}
+          )}
         </div>
-
-        {selectedFolder && (
-          <div
-            className={`file-list ${isDragActive ? 'dragging' : ''}`}
-            {...getRootProps()}
-          >
-            <input {...getInputProps()} />
-            <h2>{selectedFolder.name}の中身</h2>
-            {!selectedFolder.isTrash && (
-              <p className="drop-zone">
-                {isDragActive
-                  ? 'ファイルをここにドロップしてください'
-                  : 'ここにファイルをドラッグ＆ドロップしてください（Excel, PowerPoint, Word, PDF）'
-                }
-              </p>
-            )}
-            {selectedFolder.isTrash ? (
-              <>
-                {sortedFiles.map(file => (
-                  <FileItem
-                    key={file.id}
-                    file={file}
-                    importToGoogleDrive={importToGoogleDrive}
-                    handleDownload={handleDownload}
-                    restoreFile={restoreFile}
-                    permanentlyDeleteFile={permanentlyDeleteFile}
-                    editFileName={editFileName}
-                    moveToTrash={moveToTrash}
-                    isTrash={true}
-                  />
-                ))}
-              </>
-            ) : (
-              <>
-                {sortedFiles.map(file => (
-                  <FileItem
-                    key={file.id}
-                    file={file}
-                    importToGoogleDrive={importToGoogleDrive}
-                    handleDownload={handleDownload}
-                    restoreFile={restoreFile}
-                    permanentlyDeleteFile={permanentlyDeleteFile}
-                    editFileName={editFileName}
-                    moveToTrash={moveToTrash}
-                    isTrash={false}
-                  />
-                ))}
-              </>
-            )}
-            {/* フォルダ内のPDF合計金額を表示 */}
-            {!selectedFolder.isTrash && files.some(file => file.type === 'pdf') && (
-              <div className="total-amount">
-                <h3>請求書合計: ¥{calculateTotalAmountFromPDF.toLocaleString()}</h3>
-              </div>
-            )}
+        <button onClick={() => importSpreadsheet()}>スプレッドシートをインポート</button>
+        <button
+          onClick={openModal}
+          disabled={!selectedFolder || files.length === 0}
+          style={{
+            backgroundColor: (!selectedFolder || files.length === 0) ? 'gray' : 'initial',
+            cursor: (!selectedFolder || files.length === 0) ? 'not-allowed' : 'pointer'
+          }}
+        >
+          請求書作成ページへ
+        </button>
+        {isModalOpen && (
+          <div className="modal">
+            <div className="modal-content">
+              <span className="close" onClick={closeModal}>&times;</span>
+              <InvoiceCreator selectedFolderId={selectedFolder?.id} closeModal={closeModal} addNewFile={addNewFile} />
+            </div>
           </div>
         )}
       </div>
-      <button onClick={() => importSpreadsheet()}>スプレッドシートをインポート</button>
-    </div>
+    </Router>
   )
 }
 

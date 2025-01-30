@@ -1,0 +1,193 @@
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+  width: 100%;
+  max-width: 1000px;
+  position: relative;
+}
+
+.close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  cursor: pointer;
+}
+
+.invoice-container {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.invoice-title {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.invoice-form label {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.invoice-form input,
+.invoice-form textarea {
+  width: 100%;
+  padding: 8px;
+  margin-top: 5px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.invoice-items {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.invoice-items th,
+.invoice-items td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.invoice-items th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+.invoice-items th:nth-child(2),
+/* 数量 */
+.invoice-items td:nth-child(2),
+.invoice-items th:nth-child(3),
+/* 単価 */
+.invoice-items td:nth-child(3) {
+  width: 20%;
+  text-align: center;
+}
+
+.invoice-items th:nth-child(4),
+/* 操作 */
+.invoice-items td:nth-child(4) {
+  width: 10%;
+  text-align: center;
+}
+
+.invoice-item input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px;
+  text-align: center;
+}
+
+.invoice-item td:first-child input {
+  width: 90%;
+  /* 品名を適切な幅に */
+  text-align: left;
+}
+
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+
+.invoice-item input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px;
+  text-align: center;
+}
+
+.invoice-item td:first-child input {
+  text-align: left;
+  /* 品名だけ左寄せ */
+}
+
+
+.invoice-item input {
+  width: 90%;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+.icon-btn {
+  padding: 8px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.delete-btn {
+  background-color: #ff4d4d;
+}
+
+.add-btn {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.total-amount {
+  text-align: right;
+  margin-top: 20px;
+}
+
+.save-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+.save-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.invoice-item {
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.invoice-item input {
+  margin-right: 10px;
+  flex: 1;
+}
+
+.delete-btn {
+  margin-left: 10px;
+}

@@ -17,8 +17,14 @@ export interface MyFile {
       invoiceNumber?: string;
       date?: string;
       dueDate?: string;    // 支払い期限を追加
+      client?: string;
+      subject?: string;
+      bankDetails?: string;
     };
   };
+  folderId?: string;
+  content?: Blob;
+  createdAt?: Date;
 }
 
 export interface Folder {
