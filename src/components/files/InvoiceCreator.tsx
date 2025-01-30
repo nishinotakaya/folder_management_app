@@ -19,18 +19,8 @@ interface Item {
   unitPrice: number;
 }
 
-interface InvoiceData {
-  invoiceNumber: string;
-  date: string;
-  dueDate: string;
-  totalAmount: number;
-  client: string;
-  subject: string;
-  bankDetails: string;
-}
-
 const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({ selectedFolderId, closeModal, addNewFile }) => {
-  const [invoiceData, setInvoiceData] = useState<InvoiceData>({
+  const [invoiceData, setInvoiceData] = useState({
     invoiceNumber: '',
     date: '',
     dueDate: '',
@@ -79,96 +69,103 @@ const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({ selectedFolderId, close
 
     // フォントの埋め込み
     const fontUrl = '/src/assets/fonts/NotoSansJP-Regular.ttf'; // フォントファイルのパス
-    const response = await fetch(fontUrl);
-    const fontBlob = await response.blob();
-    const reader = new FileReader();
+    console.log('フォントURL:', fontUrl);
 
-    reader.readAsDataURL(fontBlob);
-    reader.onloadend = () => {
-      const base64data = reader.result as string;
-      const base64 = base64data.split(',')[1];
+    try {
+      const response = await fetch(fontUrl);
+      if (!response.ok) {
+        throw new Error(`フォントのフェッチに失敗しました: ${response.statusText}`);
+      }
+      const fontBlob = await response.blob();
+      const reader = new FileReader();
 
-      doc.addFileToVFS('NotoSansJP-Regular.ttf', base64);
-      doc.addFont('NotoSansJP-Regular.ttf', 'NotoSansJP', 'normal');
-      doc.setFont('NotoSansJP'); // フォントを適用
-      doc.setFontSize(12);
+      reader.readAsDataURL(fontBlob);
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        const base64 = base64data.split(',')[1];
 
-      // 作成日
-      const currentDate = new Date().toLocaleDateString();
-      doc.text(`作成日: ${currentDate}`, 150, 10);
+        doc.addFileToVFS('NotoSansJP-Regular.ttf', base64);
+        doc.addFont('NotoSansJP-Regular.ttf', 'NotoSansJP', 'normal');
+        doc.setFont('NotoSansJP'); // フォントを適用
+        doc.setFontSize(12);
 
-      // 会社名 & 案件名
-      doc.setFontSize(14);
-      doc.text(`請求書`, 90, 20);
-      doc.setFontSize(12);
-      doc.text(`会社名: ${invoiceData.client}`, 10, 30);
-      doc.text(`案件名: ${invoiceData.subject}`, 10, 40);
+        // 作成日
+        const currentDate = new Date().toLocaleDateString();
+        doc.text(`作成日: ${currentDate}`, 150, 10);
 
-      // 請求情報
-      doc.text(`請求書番号: ${invoiceData.invoiceNumber}`, 10, 50);
-      doc.text(`請求日: ${invoiceData.date}`, 10, 60);
-      doc.text(`支払期日: ${invoiceData.dueDate}`, 10, 70);
+        // 会社名 & 案件名
+        doc.setFontSize(14);
+        doc.text(`請求書`, 90, 20);
+        doc.setFontSize(12);
+        doc.text(`会社名: ${invoiceData.client}`, 10, 30);
+        doc.text(`案件名: ${invoiceData.subject}`, 10, 40);
 
-      // 振込先情報
-      doc.text(`振込先:  ${invoiceData.bankDetails}`, 10, 80);
+        // 請求情報
+        doc.text(`請求書番号: ${invoiceData.invoiceNumber}`, 10, 50);
+        doc.text(`請求日: ${invoiceData.date}`, 10, 60);
+        doc.text(`支払期日: ${invoiceData.dueDate}`, 10, 70);
 
-      // テーブルヘッダー
-      autoTable(doc, {
-        startY: 100,
-        head: [['品名', '数量', '単価', '小計']],
-        body: items.map(item => [
-          item.productName || '',
-          item.quantity || 0,
-          item.unitPrice || 0,
-          (item.quantity || 0) * (item.unitPrice || 0),
-        ]),
-        styles: { font: 'NotoSansJP' } // 日本語フォントを適用
-      });
+        // 振込先情報
+        doc.text(`振込先:  ${invoiceData.bankDetails}`, 10, 80);
 
-      // 合計金額
-      const finalY = (doc as any).lastAutoTable.finalY;
-      doc.text(`ご請求金額（税込）: ¥${invoiceData.totalAmount.toLocaleString()}`, 10, finalY + 10);
+        // テーブルヘッダー
+        autoTable(doc, {
+          startY: 100,
+          head: [['品名', '数量', '単価', '小計']],
+          body: items.map(item => [
+            item.productName || '',
+            item.quantity || 0,
+            item.unitPrice || 0,
+            (item.quantity || 0) * (item.unitPrice || 0),
+          ]),
+          styles: { font: 'NotoSansJP' } // 日本語フォントを適用
+        });
 
-      // PDFをBlobとして取得
-      const pdfBlob = doc.output('blob');
-      const pdfFileName = `請求書_${invoiceData.invoiceNumber}.pdf`;
+        // 合計金額
+        const finalY = (doc as any).lastAutoTable.finalY;
+        doc.text(`ご請求金額（税込）: ¥${invoiceData.totalAmount.toLocaleString()}`, 10, finalY + 10);
 
-      // IndexedDB に保存
-      const newFile: DBMyFile = {
-        id: Date.now().toString(),
-        name: pdfFileName,
-        folderId: selectedFolderId,
-        content: pdfBlob,
-        lastModified: new Date(),
-        type: 'pdf',
-        data: '',
-        deleted: 0,
-        originalFolderId: null,
-        isHidden: false,
-        createdAt: new Date(),
-        metadata: {
-          invoiceData: {
-            invoiceNumber: invoiceData.invoiceNumber,
-            totalAmount: invoiceData.totalAmount,
-            client: invoiceData.client,
-            subject: invoiceData.subject,
-            date: invoiceData.date,
-            dueDate: invoiceData.dueDate,
-            bankDetails: invoiceData.bankDetails,
+        // PDFをBlobとして取得
+        const pdfBlob = doc.output('blob');
+        const pdfFileName = `請求書_${invoiceData.invoiceNumber}.pdf`;
+
+        // IndexedDB に保存
+        const newFile: DBMyFile = {
+          id: Date.now().toString(),
+          name: pdfFileName,
+          folderId: selectedFolderId,
+          content: pdfBlob,
+          lastModified: new Date(),
+          type: 'pdf',
+          data: '',
+          deleted: 0,
+          originalFolderId: null,
+          isHidden: false,
+          createdAt: new Date(),
+          metadata: {
+            invoiceData: {
+              invoiceNumber: invoiceData.invoiceNumber,
+              totalAmount: invoiceData.totalAmount,
+              client: invoiceData.client,
+              subject: invoiceData.subject,
+              date: invoiceData.date,
+              dueDate: invoiceData.dueDate,
+              bankDetails: invoiceData.bankDetails,
+            }
           }
-        }
+        };
+        addNewFile(newFile);
+
+        // PDFをダウンロード
+        doc.save(pdfFileName);
+
+        // モーダルを閉じる
+        closeModal();
       };
-      addNewFile(newFile);
-
-      // PDFをダウンロード
-      doc.save(pdfFileName);
-
-      // モーダルを閉じる
-      closeModal();
-    };
+    } catch (error) {
+      console.error('フォントの読み込みエラー:', error);
+    }
   };
-
-
 
   // 新しい関数を追加
   const saveToOpenFile = (pdfBlob: Blob, pdfFileName: string) => {
