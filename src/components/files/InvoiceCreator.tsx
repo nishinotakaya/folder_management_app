@@ -131,7 +131,7 @@ const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({ selectedFolderId, close
 
       // PDFをBlobとして取得
       const pdfBlob = doc.output('blob');
-      const pdfFileName = `Invoice_${invoiceData.invoiceNumber}.pdf`;
+      const pdfFileName = `請求書_${invoiceData.invoiceNumber}.pdf`;
 
       // IndexedDB に保存
       const newFile: DBMyFile = {

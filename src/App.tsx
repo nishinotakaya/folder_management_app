@@ -693,13 +693,22 @@ function App() {
     }
   };
 
-  const openModal = () => setIsModalOpen(true);
+  const openModal = () => {
+    console.log("Modalを開く");
+    setIsModalOpen(true);
+  };
+
   const closeModal = () => setIsModalOpen(false);
 
   // 新しいファイルを追加する関数
   const addNewFile = (newFile: DBMyFile) => {
     setFiles(prevFiles => [...prevFiles, newFile]);
   };
+
+  useEffect(() => {
+    console.log("選択されたフォルダー:", selectedFolder);
+    console.log("ファイル数:", files.length);
+  }, [selectedFolder, files]);
 
   return (
     <Router>
@@ -794,10 +803,10 @@ function App() {
         <button onClick={() => importSpreadsheet()}>スプレッドシートをインポート</button>
         <button
           onClick={openModal}
-          disabled={!selectedFolder || files.length === 0}
+          disabled={!selectedFolder}
           style={{
-            backgroundColor: (!selectedFolder || files.length === 0) ? 'gray' : 'initial',
-            cursor: (!selectedFolder || files.length === 0) ? 'not-allowed' : 'pointer'
+            backgroundColor: !selectedFolder ? 'gray' : 'initial',
+            cursor: !selectedFolder ? 'not-allowed' : 'pointer'
           }}
         >
           請求書作成ページへ
