@@ -41,6 +41,8 @@ function App() {
     localStorage.getItem('userEmail')
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [invoiceData, setInvoiceData] = useState<InvoiceData>({});
 
   useEffect(() => {
     if (accessToken) {
@@ -134,23 +136,31 @@ function App() {
   // フォルダーとファイルの初期化
   useEffect(() => {
     const initializeData = async () => {
+      await db.open();
+
       const storedFolders = await db.folders.toArray();
       if (storedFolders.length === 0) {
-        // ゴミ箱フォルダを作成
         const trashFolder: Folder = {
           id: 'trash',
           name: 'ゴミ箱',
           isTrash: true
         };
         await db.folders.add(trashFolder);
-        setFolders([trashFolder]);
-      } else {
-        setFolders(storedFolders);
+        storedFolders.push(trashFolder);
       }
 
+      setFolders(storedFolders);
+
+      // いったん全ファイルを取得しておく（とりあえずでOK）
       const storedFiles = await db.files.toArray();
       setFiles(storedFiles);
+
+      // フォルダーが一つ以上あるなら、最初のものをデフォルト選択にしてみる
+      if (!selectedFolder && storedFolders.length > 0) {
+        setSelectedFolder(storedFolders[0]);
+      }
     };
+
     initializeData();
   }, []);
 
@@ -162,10 +172,11 @@ function App() {
           const trashFiles = await db.files.where('deleted').equals(1).toArray();
           setFiles(trashFiles);
         } else {
+          // 通常フォルダーの場合
           const folderFiles = await db.files
             .where('originalFolderId')
             .equals(selectedFolder.id)
-            .and(file => file.deleted === 0)  // 削除されていないファイルのみを取得
+            .and(file => file.deleted === 0)
             .toArray();
           setFiles(folderFiles);
         }
@@ -398,8 +409,17 @@ function App() {
   // ファイルのダウンロード処理
   const handleDownload = (fileData: string, fileName: string) => {
     try {
+      if (!fileData.startsWith('data:')) {
+        throw new Error('Invalid file data format');
+      }
+
       // Base64データからBlobを作成
-      const byteString = atob(fileData.split(',')[1]);
+      const base64Data = fileData.split(',')[1];
+      if (!base64Data) {
+        throw new Error('Base64 data is missing');
+      }
+
+      const byteString = atob(base64Data);
       const mimeString = fileData.split(',')[0].split(':')[1].split(';')[0];
       const ab = new ArrayBuffer(byteString.length);
       const ia = new Uint8Array(ab);
@@ -701,7 +721,10 @@ function App() {
   const closeModal = () => setIsModalOpen(false);
 
   // 新しいファイルを追加する関数
-  const addNewFile = (newFile: DBMyFile) => {
+  const addNewFile = async (newFile: DBMyFile) => {
+    // ① db.files.addでIndexedDBに保存
+    await db.files.add(newFile);
+    // ② state更新（ファイル一覧に即時反映させる）
     setFiles(prevFiles => [...prevFiles, newFile]);
   };
 
@@ -709,6 +732,23 @@ function App() {
     console.log("選択されたフォルダー:", selectedFolder);
     console.log("ファイル数:", files.length);
   }, [selectedFolder, files]);
+
+  // App.tsx
+  const openEditModal = (fileId: string) => {
+    console.log(`Editing file with ID: ${fileId}`);
+    const fileToEdit = files.find(file => file.id === fileId);
+    if (fileToEdit && fileToEdit.metadata?.invoiceData) {
+      // invoiceDataをセット
+      setInvoiceData(fileToEdit.metadata.invoiceData);
+      setIsEditModalOpen(true);
+    }
+  };
+
+
+  const closeEditModal = () => {
+    setInvoiceData({});
+    setIsEditModalOpen(false);
+  };
 
   return (
     <Router>
@@ -815,7 +855,25 @@ function App() {
           <div className="modal">
             <div className="modal-content">
               <span className="close" onClick={closeModal}>&times;</span>
-              <InvoiceCreator selectedFolderId={selectedFolder?.id} closeModal={closeModal} addNewFile={addNewFile} />
+              <InvoiceCreator
+                selectedFolderId={selectedFolder?.id}
+                closeModal={closeModal}
+                addNewFile={addNewFile}
+                unit=""
+              />
+            </div>
+          </div>
+        )}
+        {isEditModalOpen && (
+          <div className="modal">
+            <div className="modal-content">
+              <span className="close" onClick={closeEditModal}>&times;</span>
+              <InvoiceCreator
+                selectedFolderId={selectedFolder?.id}
+                closeModal={closeEditModal}
+                addNewFile={addNewFile}
+                unit=""
+              />
             </div>
           </div>
         )}

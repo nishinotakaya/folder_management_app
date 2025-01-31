@@ -1,3 +1,4 @@
+/* モーダルの親。画面中央にコンテンツを配置 */
 .modal {
   position: fixed;
   top: 0;
@@ -8,28 +9,39 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  /* 垂直方向に中央寄せ */
 }
 
+/* モーダルの中身 */
 .modal-content {
-  background-color: white;
-  padding: 20px;
-  border-radius: 5px;
-  width: 100%;
-  max-width: 1000px;
   position: relative;
+  /* 「×」ボタンの絶対配置用 */
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  /* 幅を広げる */
+  max-width: 1200px;
+  /* 最大幅を設定 */
+  max-height: 80%;
+  /* 画面をはみ出さないように */
+  overflow-y: auto;
+  /* 内容が長いときスクロール */
 }
 
 .close {
   position: absolute;
   top: 10px;
   right: 10px;
+  font-size: 24px;
+  background: transparent;
+  border: none;
   cursor: pointer;
 }
 
+
 .invoice-container {
   padding: 20px;
-  max-width: 900px;
-  margin: 0 auto;
+  margin: 0;
   background-color: #f9f9f9;
   border-radius: 8px;
 }
