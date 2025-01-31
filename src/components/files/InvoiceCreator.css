@@ -84,21 +84,32 @@
   font-weight: bold;
 }
 
+/* --- 数量(2列目) --- */
 .invoice-items th:nth-child(2),
-/* 数量 */
-.invoice-items td:nth-child(2),
-.invoice-items th:nth-child(3),
-/* 単価 */
-.invoice-items td:nth-child(3) {
-  width: 20%;
+.invoice-items td:nth-child(2) {
   text-align: center;
 }
 
-.invoice-items th:nth-child(4),
-/* 操作 */
-.invoice-items td:nth-child(4) {
-  width: 10%;
+/* --- 単位(3列目)に幅を指定(元は単価が20%) --- */
+.invoice-items th:nth-child(3),
+.invoice-items td:nth-child(3) {
+  width: 20%;
+  /* ← 単価列で使っていた幅を単位列に付与 */
   text-align: center;
+}
+
+/* --- 単価(4列目)は幅指定を外す、あるいはもっと狭くするなど調整 --- */
+.invoice-items th:nth-child(4),
+.invoice-items td:nth-child(4) {
+  text-align: center;
+  /* 金額の列なので右寄せ推奨(好みで変更可) */
+}
+
+/* --- 操作(5列目) --- */
+.invoice-items th:nth-child(5),
+.invoice-items td:nth-child(5) {
+  text-align: center;
+  /* 必要に応じて width: 10%; など指定 */
 }
 
 .invoice-item input {
