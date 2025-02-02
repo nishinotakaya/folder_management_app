@@ -43,6 +43,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [invoiceData, setInvoiceData] = useState<InvoiceData>({});
+  const [editingFile, setEditingFile] = useState<DBMyFile | null>(null);
 
   useEffect(() => {
     if (accessToken) {
@@ -464,15 +465,13 @@ function App() {
     }
   };
 
-  const editFileName = async (folderId: string, fileId: string) => {
+  const editFileData = async (folderId: string, fileId: string) => {
     const file = await db.files.get(fileId);
     if (!file) return;
-
-    const newName = prompt('新しいファイル名を入力してください', file.name);
-    if (newName) {
-      await db.files.update(fileId, { name: newName });
-      setFiles(await db.files.toArray());
-    }
+    // 編集対象にファイルのメタデータ（invoiceData など）をセット
+    setEditingFile(file);
+    console.log("Editing file data:", file);
+    setIsModalOpen(true);
   };
 
   const moveToTrash = async (folderId: string, fileId: string) => {
@@ -808,7 +807,7 @@ function App() {
                       handleDownload={handleDownload}
                       restoreFile={restoreFile}
                       permanentlyDeleteFile={permanentlyDeleteFile}
-                      editFileName={editFileName}
+                      editFileData={editFileData}
                       moveToTrash={moveToTrash}
                       isTrash={true}
                     />
@@ -824,7 +823,7 @@ function App() {
                       handleDownload={handleDownload}
                       restoreFile={restoreFile}
                       permanentlyDeleteFile={permanentlyDeleteFile}
-                      editFileName={editFileName}
+                      editFileData={editFileData}
                       moveToTrash={moveToTrash}
                       isTrash={false}
                     />
@@ -860,6 +859,8 @@ function App() {
                 closeModal={closeModal}
                 addNewFile={addNewFile}
                 unit=""
+                editingFile={editingFile}
+                setEditingFile={setEditingFile}
               />
             </div>
           </div>
@@ -873,6 +874,8 @@ function App() {
                 closeModal={closeEditModal}
                 addNewFile={addNewFile}
                 unit=""
+                editingFile={editingFile}
+                setEditingFile={setEditingFile}
               />
             </div>
           </div>

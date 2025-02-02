@@ -7,7 +7,7 @@ interface FileListProps {
   handleDownload: (fileData: string, fileName: string) => void;
   restoreFile: (fileId: string) => void;
   permanentlyDeleteFile: (fileId: string) => void;
-  editFileName: (folderId: string, fileId: string) => void;
+  editFileData: (folderId: string, fileId: string) => void;
   moveToTrash: (folderId: string, fileId: string) => void;
   isTrash: boolean;
 }
@@ -18,7 +18,7 @@ const FileList: React.FC<FileListProps> = ({
   handleDownload,
   restoreFile,
   permanentlyDeleteFile,
-  editFileName,
+  editFileData,
   moveToTrash,
   isTrash
 }) => {
@@ -51,7 +51,7 @@ const FileList: React.FC<FileListProps> = ({
           </>
         ) : (
           <>
-            <button onClick={() => editFileName(file.originalFolderId || '', file.id)} title="ファイル名を編集">✏️</button>
+            <button onClick={() => editFileData(file.originalFolderId || '', file.id)} title="ファイルデータを編集">✏️</button>
             <button onClick={() => moveToTrash(file.originalFolderId || '', file.id)} title="ゴミ箱に移動">🗑️</button>
             {(file.type === 'excel' || file.type === 'powerpoint') && (
               <button onClick={() => importToGoogleDrive(file)} title="Google Driveにインポート">⇪ Import</button>

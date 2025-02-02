@@ -10,6 +10,8 @@ interface InvoiceCreatorProps {
   closeModal: () => void;
   addNewFile: (newFile: DBMyFile) => Promise<void>; // <- Promise<void> にしておくと安心
   unit: string; // 単位を追加
+  editingFile: DBMyFile | null;
+  setEditingFile: React.Dispatch<React.SetStateAction<DBMyFile | null>>;
 }
 
 interface Item {
@@ -83,7 +85,9 @@ const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({
   selectedFolderId,
   closeModal,
   addNewFile,
-  unit
+  unit,
+  editingFile,
+  setEditingFile
 }) => {
   const [invoiceData, setInvoiceData] = useState<InvoiceData>({
     invoiceNumber: '',
@@ -101,6 +105,12 @@ const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({
   const [items, setItems] = useState<Item[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTaxIncluded, setIsTaxIncluded] = useState(true); // 消費税込みかどうかの状態を追加
+
+  useEffect(() => {
+    if (editingFile && editingFile.metadata && editingFile.metadata.invoiceData) {
+      setInvoiceData(editingFile.metadata.invoiceData);
+    }
+  }, [editingFile]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -211,8 +221,8 @@ const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({
       date.setDate(date.getDate() - 1);  // 1日引く
 
       const invoiceDateText = invoiceData.date
-      ? new Date(invoiceData.date).toLocaleDateString('ja-JP')
-      : '未設定';
+        ? new Date(invoiceData.date).toLocaleDateString('ja-JP')
+        : '未設定';
       // 請求日を右上に表示
       doc.text(`${invoiceDateText}`, 200, 30, { align: 'right' });
 
@@ -398,9 +408,9 @@ const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({
     }
   };
 
-  const openModal = () => {
-    setIsModalOpen(true);
-  };
+  // const openModal = () => {
+  //   setIsModalOpen(true);
+  // };
 
   const closeModalHandler = () => {
     setIsModalOpen(false);
@@ -504,9 +514,14 @@ const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({
       {isModalOpen && (
         <div className="modal">
           <h2>編集モーダル</h2>
-          <InvoiceModal invoiceData={invoiceData} handleInputChange={handleInputChange} closeModal={closeModalHandler} />
+          <InvoiceModal
+            invoiceData={editingFile?.metadata?.invoiceData || {}}
+            handleInputChange={handleInputChange}
+            closeModal={closeModalHandler}
+          />
         </div>
       )}
+
     </div>
   );
 };
