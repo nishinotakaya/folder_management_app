@@ -390,7 +390,8 @@ const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({
         createdAt: new Date(),
         metadata: {
           invoiceData: {
-            ...invoiceData
+            ...invoiceData,
+            isTaxIncluded: isTaxIncluded,
           }
         }
       };

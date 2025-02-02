@@ -26,6 +26,7 @@ export interface MyFile {
       companyName?: string; // 会社名
       seal?: string; // 印鑑
       unit?: string; // 単位
+      isTaxIncluded?: boolean; // 消費税込みかどうか
     };
   };
   folderId?: string; // フォルダID

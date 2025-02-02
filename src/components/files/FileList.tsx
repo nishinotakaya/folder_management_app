@@ -61,7 +61,12 @@ const FileList: React.FC<FileListProps> = ({
       </div>
       {file.type === 'pdf' && file.metadata?.invoiceData && (
         <div className="invoice-info">
-          <span>合計金額: ¥{file.metadata.invoiceData.totalAmount?.toLocaleString()}</span>
+          <span>
+            合計金額: ¥
+            {file.metadata.invoiceData.isTaxIncluded
+              ? (file.metadata.invoiceData.totalAmount ?? 0).toLocaleString()
+              : Math.round((file.metadata.invoiceData.totalAmount ?? 0) * 1.1).toLocaleString()}
+          </span>
         </div>
       )}
     </div>
