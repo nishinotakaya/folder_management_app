@@ -203,8 +203,21 @@ const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({
       doc.line(startX, 31, endX, 31); // アンダーバーを文字列の下に引く
 
       // 作成日
-      const currentDate = new Date().toLocaleDateString();
-      doc.text(`作成日: ${currentDate}`, 200, 30, { align: 'right' });
+      // const currentDate = new Date().toLocaleDateString();
+      // doc.text(`作成日: ${currentDate}`, 200, 30, { align: 'right' });
+
+      // 作成日を昨日に設定
+      const date = new Date();
+      date.setDate(date.getDate() - 1);  // 1日引く
+
+      const invoiceDateText = invoiceData.date
+      ? new Date(invoiceData.date).toLocaleDateString('ja-JP')
+      : '未設定';
+      // 請求日を右上に表示
+      doc.text(`${invoiceDateText}`, 200, 30, { align: 'right' });
+
+      // PDFに表示する
+      doc.text(`${invoiceDateText}`, 200, 30, { align: 'right' });
 
       // 会社名
       doc.text(`${invoiceData.companyName || '未設定'}`, 200, 40, { align: 'right' });
