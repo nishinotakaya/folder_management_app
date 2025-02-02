@@ -10,7 +10,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import OpenAI from 'openai';
 import FileList from './components/files/FileList';
 import { BrowserRouter as Router } from 'react-router-dom';
-import InvoiceCreator from './components/invoices/InvoiceCreator';
+import InvoiceCreator from '././components/invoices/InvoiceCreator';
 
 // PDFワーカーの設定
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
