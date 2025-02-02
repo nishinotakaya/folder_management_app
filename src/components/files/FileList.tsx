@@ -1,5 +1,5 @@
 import React from 'react';
-import { MyFile } from '../../db';
+import { MyFile } from '../db/db';
 
 interface FileListProps {
   file: MyFile;

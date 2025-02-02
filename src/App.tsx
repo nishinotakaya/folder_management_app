@@ -1,16 +1,16 @@
 // src/App.tsx
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import './App.css';
+import './/assets/App.css';
 import { useDropzone } from 'react-dropzone';
 import { saveAs } from 'file-saver';
 import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import axios from 'axios';
-import { db, Folder, MyFile as DBMyFile } from './db';
+import { db, Folder, MyFile as DBMyFile } from './components/db/db';
 import * as pdfjsLib from 'pdfjs-dist';
 import OpenAI from 'openai';
 import FileList from './components/files/FileList';
 import { BrowserRouter as Router } from 'react-router-dom';
-import InvoiceCreator from './components/files/InvoiceCreator';
+import InvoiceCreator from './components/invoices/InvoiceCreator';
 
 // PDFワーカーの設定
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(

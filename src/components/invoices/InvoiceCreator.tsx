@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { MyFile as DBMyFile } from '../../db';
+import { MyFile as DBMyFile } from '../db/db';
 import '@fontsource/noto-sans-jp';
-import './InvoiceCreator.css'; // CSS適用
+import '../../assets/InvoiceCreator.css'; // CSS適用
 
 interface InvoiceCreatorProps {
   selectedFolderId: string | undefined;
