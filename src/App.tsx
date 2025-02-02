@@ -597,19 +597,20 @@ function App() {
     });
   }, [files]);
 
-  // 選択されたフォルダ内のPDFファイルの合計金額を計算する関数
-  const calculateTotalAmountFromPDF = useMemo(() => {
-    if (!selectedFolder || selectedFolder.isTrash) return 0;
-
+  // 全ファイルの税込価格を計算する関数
+  const calculateTotalAmountFromAllFiles = useMemo(() => {
     return files.reduce((total, file) => {
-      const amount = file.type === 'pdf' && file.metadata?.invoiceData?.totalAmount
-        ? Number(file.metadata.invoiceData.totalAmount)
-        : 0;
+      if (file.type !== 'pdf' || !file.metadata?.invoiceData) return total;
+
+      const { totalAmount = 0, isTaxIncluded } = file.metadata.invoiceData;
+      const amount = isTaxIncluded
+        ? totalAmount
+        : Math.round(totalAmount * 1.1); // 税抜金額を税込に変換
 
       // NaNをチェック
       return total + (isNaN(amount) ? 0 : amount);
     }, 0);
-  }, [files, selectedFolder]);
+  }, [files]);
 
   const fetchFilesFromGoogleDrive = async (accessToken: string) => {
     try {
@@ -833,7 +834,7 @@ function App() {
               {/* フォルダ内のPDF合計金額を表示 */}
               {!selectedFolder.isTrash && files.some(file => file.type === 'pdf') && (
                 <div className="total-amount">
-                  <h3>請求書合計: ¥{calculateTotalAmountFromPDF.toLocaleString()}</h3>
+                  <h3>請求書合計: ¥{calculateTotalAmountFromAllFiles.toLocaleString()}</h3>
                 </div>
               )}
             </div>
