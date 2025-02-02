@@ -508,7 +508,12 @@ const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({
         </div>
       </div>
 
-      <h3 className="total-amount">合計金額: ¥{invoiceData?.totalAmount}</h3>
+      <h3 className="total-amount">
+        合計金額: ¥
+        {isTaxIncluded
+          ? (invoiceData?.totalAmount ?? 0).toLocaleString() // 税込みの場合はそのまま
+          : Math.round((invoiceData?.totalAmount ?? 0) * 1.1).toLocaleString()}
+      </h3>
       <button className="save-btn" onClick={createPDF} disabled={!selectedFolderId}>
         PDFとして保存
       </button>
