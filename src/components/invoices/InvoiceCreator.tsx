@@ -236,7 +236,7 @@ const InvoiceCreator: React.FC<InvoiceCreatorProps> = ({
       doc.text(`請求書番号: ${invoiceData.invoiceNumber || '未設定'}`, 200, 50, { align: 'right' });
 
       // 案件名
-      doc.text(`案件名: ${invoiceData.subject || '未設定'}`, 200, 60, { align: 'right' });
+      doc.text(`件名: ${invoiceData.subject || '未設定'}`, 200, 60, { align: 'right' });
 
       // 適格請求書発行事業者登録番号
       doc.text(`適格請求書発行事業者登録番号: ${invoiceData.registrationNumber || '未設定'}`, 10, 70);
